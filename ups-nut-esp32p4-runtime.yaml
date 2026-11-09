@@ -1,0 +1,8 @@
+# Local deployment wrapper. NUT credentials are supplied only through the
+# process environment and are never stored in this project file.
+packages:
+  base: !include ups-nut-esp32p4.yaml
+
+nut_server:
+  username: !env_var UPS_NUT_RUNTIME_USERNAME
+  password: !env_var UPS_NUT_RUNTIME_PASSWORD

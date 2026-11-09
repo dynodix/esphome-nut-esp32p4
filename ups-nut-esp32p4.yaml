@@ -1,0 +1,155 @@
+substitutions:
+  name: "ups-nut-esp32p4"
+  friendly_name: "UPS NUT ESP32-P4"
+  ups_name: "ups-esp32p4"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+
+esp32:
+  board: esp32-p4-evboard
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+external_components:
+  - source:
+      type: local
+      path: components/ups_nut_esp32p4
+    components:
+      - ups_hid
+      - nut_server
+
+logger:
+  hardware_uart: UART0
+  level: INFO
+
+api:
+
+ota:
+  - platform: esphome
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO31
+  mdio_pin: GPIO52
+  power_pin: GPIO51
+  clk:
+    mode: CLK_EXT_IN
+    pin: GPIO50
+  phy_addr: 1
+
+# ups_hid owns the ESP-IDF USB Host library. Do not add ESPHome's usb_host
+# component here; installing both stacks would initialize the same host twice.
+ups_hid:
+  id: ups_monitor
+  protocol: auto
+  protocol_timeout: 15s
+  update_interval: 10s
+  fallback_nominal_voltage: 230V
+
+nut_server:
+  ups_hid_id: ups_monitor
+  ups_name: ${ups_name}
+  port: 3493
+  username: !secret nut_username
+  password: !secret nut_password
+  max_clients: 4
+
+sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery charge"
+    type: battery_level
+    unit_of_measurement: "%"
+    device_class: battery
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery runtime"
+    type: runtime
+    unit_of_measurement: "min"
+    device_class: duration
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS load"
+    type: load_percent
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Input voltage"
+    type: input_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Output voltage"
+    type: output_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery voltage"
+    type: battery_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+
+binary_sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS mains online"
+    type: online
+    device_class: power
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS on battery"
+    type: on_battery
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS low battery"
+    type: low_battery
+    device_class: battery
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS fault"
+    type: fault
+    device_class: problem
+
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "${ups_name} IP"
+    mac_address:
+      name: "${ups_name} MAC"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS manufacturer"
+    type: manufacturer
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS model"
+    type: model
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS status"
+    type: status
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS protocol"
+    type: protocol
+  - platform: version
+    name: "ESPHome version"
+

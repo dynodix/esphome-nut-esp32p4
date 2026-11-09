@@ -1,0 +1,14 @@
+.esphome/
+.pioenvs/
+.piolibdeps/
+build/
+.venv/
+.codex/
+backup/
+upstream/
+reference/
+secrets.yaml
+*.bin
+__pycache__/
+*.pyc
+
