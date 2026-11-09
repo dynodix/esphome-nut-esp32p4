@@ -1,32 +1,36 @@
 # UPS NUT ESP32-P4
 
-Lokalno pripravljen ESPHome projekt za ESP32-P4 z Ethernetom IP101, USB HID UPS
-odjemalcem in NUT strežnikom na TCP 3493. Projekt uporablja popravljeni lokalni
-kopiji komponent `ups_hid` in `nut_server`; s tem ne posega v skupni komponenti,
-ki ju uporabljajo druge ESPHome naprave.
+[Slovenska različica](README_SLO.MD)
 
-## Vsebina
+An ESPHome project for an ESP32-P4 with IP101 Ethernet, a USB HID UPS client,
+and a Network UPS Tools (NUT) server on TCP port 3493. The project uses patched,
+project-local copies of the `ups_hid` and `nut_server` components, leaving shared
+components used by other ESPHome devices untouched.
 
-- `ups-nut-esp32p4.yaml` – kandidat za napravo.
-- `ups-nut-esp32p4-runtime.yaml` – lokalni ovoj za varno kompilacijo z NUT
-  poverili samo iz okoljskih spremenljivk.
-- `components/ups_nut_esp32p4/` – projektno izolirani komponenti.
-- `backup/ha-current/` – nespremenjena lokalna kopija stanja s Home Assistanta.
-- `upstream/esphome-components/` – pregledana kopija upstream repozitorija.
-- `docs/` – izhodišče, spremembe, testiranje in varen postopek namestitve.
+## Contents
 
-Prave vrednosti `nut_username` in `nut_password` ostanejo v Home Assistantovem
-`secrets.yaml`. Lokalni `secrets.yaml` vsebuje samo sintetični vrednosti za
-validacijo in je izključen iz različic.
+- `ups-nut-esp32p4.yaml` — the device configuration candidate.
+- `ups-nut-esp32p4-runtime.yaml` — a local deployment wrapper that supplies NUT
+  credentials through process environment variables without storing them in the
+  project.
+- `components/ups_nut_esp32p4/` — isolated, patched ESPHome components.
+- `backup/ha-current/` — an unchanged local backup of the Home Assistant state.
+- `upstream/esphome-components/` — the inspected copy of the upstream repository.
+- `docs/` — baseline findings, implemented changes, testing results, and safe
+  deployment instructions.
 
-## Lokalna validacija
+The real `nut_username` and `nut_password` values remain in Home Assistant's
+`secrets.yaml`. The local `secrets.yaml` is excluded from Git and must never be
+committed.
+
+## Local validation
 
 ```powershell
 .\.venv\Scripts\esphome.exe config .\ups-nut-esp32p4.yaml
 .\.venv\Scripts\esphome.exe compile .\ups-nut-esp32p4.yaml
 ```
 
-Kompilacija ne pomeni, da so USB enumeracija, HID podatki ali NUT delovanje na
-dejanski napravi vedno preverjeni za vsak model. APC Back-UPS RS 650MI je bil
-2026-11-09 uspešno preverjen prek USB HID, ESPHome API in samo bralnega NUT
-protokola. Noben UPS upravljalni ukaz ni bil izveden.
+Successful compilation alone does not verify USB enumeration, HID data, or NUT
+operation with every UPS model. An APC Back-UPS RS 650MI was successfully tested
+on 2026-11-09 through USB HID, the ESPHome API, and read-only NUT commands. No UPS
+control command was executed.
