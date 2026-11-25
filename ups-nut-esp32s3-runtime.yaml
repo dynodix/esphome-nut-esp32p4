@@ -1,0 +1,8 @@
+# The base YAML defines a runtime authentication switch, defaulting to off.
+# Enable that switch to require the credentials supplied here.
+packages:
+  base: !include ups-nut-esp32s3.yaml
+
+nut_server:
+  username: !env_var UPS_NUT_RUNTIME_USERNAME
+  password: !env_var UPS_NUT_RUNTIME_PASSWORD

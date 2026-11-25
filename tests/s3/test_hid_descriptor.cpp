@@ -1,0 +1,55 @@
+#include "components/ups_nut_esp32s3/ups_hid/hid_descriptor.h"
+#include <cassert>
+#include <iostream>
+using namespace esphome::ups_hid;
+
+int main() {
+  // Synthetic UPS: a nonstandard report ID, input voltage in tenths of volts,
+  // battery capacity, and two packed status bits after a constant padding bit.
+  std::vector<uint8_t> bytes = {
+    0x05,0x84,0x09,0x04,0xA1,0x01,
+    0x09,0x1A,0xA1,0x00,
+    0x85,0x73,0x75,0x10,0x95,0x01,
+    0x15,0x00,0x26,0xFF,0x7F,
+    0x35,0x00,0x46,0xFF,0x7F,
+    0x55,0x06,0x67,0x21,0xD1,0xF0,0x00,
+    0x09,0x30,0xB1,0x02,0xC0,
+    0x05,0x85,0x55,0x00,0x65,0x00,
+    0x75,0x08,0x26,0x64,0x00,0x46,0x64,0x00,
+    0x09,0x66,0xB1,0x02,
+    0x75,0x01,0x25,0x01,0x45,0x01,
+    0xB1,0x01,
+    0x95,0x02,0x09,0xD0,0x09,0x45,0xB1,0x02,
+    0xC0
+  };
+  HidDescriptor descriptor;
+  assert(descriptor.parse(bytes));
+  assert(descriptor.fields.size() == 4);
+  assert(descriptor.fields[0].within(0x84001A));
+  std::vector<uint8_t> report = {0x73,0xE6,0x08,0x64,0x02};
+  double value = 0;
+  assert(descriptor.fields[0].extract(report,value));
+  assert(std::abs(descriptor.fields[0].scaled(value,7)-227.8) < 0.001);
+  assert(descriptor.fields[1].extract(report,value) && value == 100);
+  assert(descriptor.fields[2].extract(report,value) && value == 1);
+  assert(descriptor.fields[3].extract(report,value) && value == 0);
+  report[0] = 0x72;
+  assert(!descriptor.fields[0].extract(report,value));
+  report = {0x73,0x00};
+  assert(!descriptor.fields[0].extract(report,value));
+  bytes.pop_back();
+  assert(!descriptor.parse(bytes));
+  // Signed values, global PUSH/POP, and separate offsets for two report IDs.
+  std::vector<uint8_t> signed_descriptor = {
+    0x05,0x85,0x85,0x10,0x15,0x80,0x25,0x7F,0x75,0x08,0x95,0x01,
+    0x09,0x68,0xB1,0x02,0xA4,0x85,0x20,0x09,0x66,0xB1,0x02,
+    0xB4,0x09,0x44,0xB1,0x02
+  };
+  assert(descriptor.parse(signed_descriptor));
+  assert(descriptor.fields[0].extract({0x10,0xFE,0x01},value) && value == -2);
+  assert(descriptor.fields[1].offset == 8);
+  assert(descriptor.fields[2].offset == 16 && descriptor.fields[2].report_id == 0x10);
+  assert(!descriptor.parse({0xB4}));
+  assert(!descriptor.parse({0xFE,0x10}));
+  std::cout << "HID descriptor parsing, units, packed bits, signed values and bounds: PASS\n";
+}

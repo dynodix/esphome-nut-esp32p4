@@ -12,3 +12,14 @@ secrets.yaml
 __pycache__/
 *.pyc
 
+
+# Generated S3 verification artifacts and local deployment data
+*.exe
+*.obj
+*.pdb
+*.elf
+*.tgz
+*.zip
+validation/
+verification.json
+*-live-verification.json

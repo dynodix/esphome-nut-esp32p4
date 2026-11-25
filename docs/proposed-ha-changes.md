@@ -1,5 +1,9 @@
 # Predlog sprememb na Home Assistantu
 
+> Zgodovinski zapis za **ESP32-P4 + APC Back-UPS RS 650MI** (2026-11-09).
+> Za S3/CS 350 glej [primerjavo](p4-vs-s3.md), [rešitev S3](esp32-s3-apc-cs350.md)
+> in [preverjanje S3](testing-s3.md). Ugotovitve o P4 se ne prenašajo samodejno na S3.
+
 Predlog je bil odobren in izveden 2026-11-09. Dokument ohranja pregled sprememb.
 
 Spremenila bi se samo glavna konfiguracija

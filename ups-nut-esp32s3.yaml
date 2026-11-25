@@ -1,0 +1,227 @@
+substitutions:
+  name: "ups-nut-esp32s3"
+  friendly_name: "UPS NUT ESP32-S3"
+  ups_name: "racktest"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: false
+  on_boot:
+    priority: 250
+    then:
+      - lambda: |-
+          id(nut_service).set_ups_name(id(nut_ups_name).state);
+          id(nut_service).set_authentication_enabled(id(nut_authentication).state);
+
+esp32:
+  # Tested configuration; confirm the pinout of your exact board revision.
+  board: esp32-s3-devkitc-1
+  framework:
+    type: esp-idf
+
+logger:
+  # Native USB is reserved for the UPS host connection.
+  hardware_uart: UART0
+  level: INFO
+  boot_log_buffer_size: 8192
+
+api:
+  actions:
+    - action: set_battery_replacement_date
+      variables:
+        date: string
+      then:
+        - lambda: |-
+            if (!id(ups_monitor).set_battery_replacement_date(date))
+              ESP_LOGW("ups_hid.maintenance", "UPS battery-date write was not confirmed");
+
+ota:
+  - platform: esphome
+
+# ---------------------------
+# Ethernet (onboard W5500)
+# Tested W5500 SPI pin mapping
+# ---------------------------
+ethernet:
+  type: W5500
+  mosi_pin: GPIO11
+  miso_pin: GPIO12
+  clk_pin: GPIO13
+  cs_pin: GPIO14
+  interrupt_pin: GPIO10
+  reset_pin: GPIO9
+
+# Isolated USB HID descriptor parser and NUT server for this device.
+external_components:
+  - source:
+      type: local
+      path: components/ups_nut_esp32s3
+    components: [ups_hid, nut_server]
+
+# ups_hid owns the ESP-IDF USB Host library. Do not add ESPHome's usb_host
+# component here; installing both stacks would initialize the same host twice.
+ups_hid:
+  id: ups_monitor
+  protocol: auto
+  protocol_timeout: 15s
+  update_interval: 10s
+  fallback_nominal_voltage: 230V
+
+nut_server:
+  id: nut_service
+  read_only: true
+  authentication_enabled: false
+  ups_hid_id: ups_monitor
+  ups_name: ${ups_name}
+  port: 3493
+  username: !secret nut_username
+  password: !secret nut_password
+  max_clients: 4
+
+sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery charge"
+    type: battery_level
+    unit_of_measurement: "%"
+    device_class: battery
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery runtime"
+    type: runtime
+    unit_of_measurement: "min"
+    device_class: duration
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS load"
+    type: load_percent
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Input voltage"
+    type: input_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Output voltage"
+    type: output_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery voltage"
+    type: battery_voltage
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+
+binary_sensor:
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS mains online"
+    type: online
+    device_class: power
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS on battery"
+    type: on_battery
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS low battery"
+    type: low_battery
+    device_class: battery
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS fault"
+    type: fault
+    device_class: problem
+
+text_sensor:
+  - platform: ethernet_info
+    ip_address:
+      name: "${ups_name} IP"
+    mac_address:
+      name: "${ups_name} MAC"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS manufacturer"
+    type: manufacturer
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS model"
+    type: model
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS status"
+    type: status
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "UPS protocol"
+    type: protocol
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery date"
+    type: battery_date
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Battery manufacturing date"
+    type: battery_mfr_date
+    entity_category: diagnostic
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Last self test"
+    type: ups_test_result
+    entity_category: diagnostic
+  - platform: version
+    name: "ESPHome version"
+
+
+# These configuration entities are restored after a restart.
+preferences:
+  flash_write_interval: 10s
+
+text:
+  - platform: nut_server
+    id: nut_ups_name
+    nut_server_id: nut_service
+    name: "NUT UPS name"
+    entity_category: config
+    mode: text
+    restore_value: true
+    initial_value: "${ups_name}"
+  - platform: ups_hid
+    ups_hid_id: ups_monitor
+    name: "Set battery replacement date"
+    entity_category: config
+    mode: text
+
+switch:
+  - platform: template
+    id: nut_authentication
+    name: "NUT authentication"
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action:
+      - lambda: id(nut_service).set_authentication_enabled(true);
+    turn_off_action:
+      - lambda: id(nut_service).set_authentication_enabled(false);
+
+button:
+  - platform: restart
+    name: "Restart monitor"
+    entity_category: config
